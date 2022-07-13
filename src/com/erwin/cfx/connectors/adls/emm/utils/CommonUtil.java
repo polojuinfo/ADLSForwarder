@@ -105,24 +105,22 @@ private static final Logger logger = Logger.getLogger(CommonUtil.class);
  */
     public String getEpocTimeInDateFormat(String epocTime) {//1645451213890
         cal.setTimeInMillis(System.currentTimeMillis());
-        //logger.info(":: START ::Method_Name :: getEpocTimeInDateFormat ::" + formatter.format(cal.getTime()));
+        //logger.info("Starting Time :" + formatter.format(cal.getTime()));
+        //logger.info("Started getEpocTimeInDateFormat Method");
         try {
             long milliseconds = Long.parseLong(epocTime);
-            //logger.info("::epocTime:: "+ epocTime + "::Long.parseLong(epocTime) :: "+milliseconds);
-            
             Calendar cal = Calendar.getInstance();
             cal.setTimeInMillis(milliseconds);
-            //SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.ENGLISH);//02/21/2022 19:16:53
-            SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-DD", Locale.ENGLISH);
+            SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.ENGLISH);//02/21/2022 19:16:53
             epocTime = sdf.format(cal.getTime());
-            //logger.info(":: epocTime :: "+epocTime);
             //date = sdf.parse(milliseconds);
             //System.out.println(date); // 2/21/2022 07:16:53   //02/21/2022 19:16:53
         } catch (Exception ex) {
             logger.error("Error in getEpocTimeInDateFormat:\n",ex);
         }
     cal.setTimeInMillis(System.currentTimeMillis());
-    //logger.info(":: End :: Method_Name :: getEpocTimeInDateFormat :: " + formatter.format(cal.getTime()));
+    //logger.info("Ending Time :" + formatter.format(cal.getTime()));
+    //logger.info("Ended getEpocTimeInDateFormat method");
         return epocTime;
     }
 /**

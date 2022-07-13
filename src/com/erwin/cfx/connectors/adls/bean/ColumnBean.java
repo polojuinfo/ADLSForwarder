@@ -23,12 +23,12 @@ public class ColumnBean implements java.io.Serializable {
     private List<CodeValue> validValues = new CopyOnWriteArrayList();
     private String tableName;
     private String columnScale;
-    private String columnPrecision; 
+    private String columnPrecision;
     private String columnDatatype;
     private String sdidescription;
     private boolean sdiflag;             
     private String physicalColumnName;
-    private AuditHistory  auditHistory;         
+    private AuditBean  auditHistory;         
     private String dataStewardName;
     private List<KeyValueBean> extendedProperties;
     private String columnComments;
@@ -137,11 +137,11 @@ public class ColumnBean implements java.io.Serializable {
         this.physicalColumnName = physicalColumnName;
     }
 
-    public AuditHistory getAuditHistory() {
+    public AuditBean getAuditHistory() {
         return auditHistory;
     }
 
-    public void setAuditHistory(AuditHistory auditHistory) {
+    public void setAuditHistory(AuditBean auditHistory) {
         this.auditHistory = auditHistory;
     }
 

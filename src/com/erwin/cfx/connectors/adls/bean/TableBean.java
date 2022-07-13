@@ -17,7 +17,7 @@ public class TableBean implements java.io.Serializable{
     private String schemaName;
     private String tableName;
     private String logicalTableName;
-    private  AuditHistory auditHistory;
+    private  AuditBean auditHistory;
     private String dataStewardName;
     private String sdiClassificationName;
     private String systemEnvironmentName;
@@ -62,11 +62,11 @@ public class TableBean implements java.io.Serializable{
         this.logicalTableName = logicalTableName;
     }
 
-    public AuditHistory getAuditHistory() {
+    public AuditBean getAuditHistory() {
         return auditHistory;
     }
 
-    public void setAuditHistory(AuditHistory auditHistory) {
+    public void setAuditHistory(AuditBean auditHistory) {
         this.auditHistory = auditHistory;
     }
 

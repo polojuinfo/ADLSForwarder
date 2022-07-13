@@ -19,7 +19,7 @@ import java.util.Map;
 public class KeyValueBean {
      private String objectTypeId = "";
     private Map<String, Object> userData = new HashMap();
-    private AuditHistory auditHistory;
+    private AuditBean auditHistory;
     private String value = "";
     private String key = "";
     private List<KeyValue> keyValues = new ArrayList();
@@ -40,11 +40,11 @@ public class KeyValueBean {
         this.userData = userData;
     }
 
-    public AuditHistory getAuditHistory() {
+    public AuditBean getAuditHistory() {
         return auditHistory;
     }
 
-    public void setAuditHistory(AuditHistory auditHistory) {
+    public void setAuditHistory(AuditBean auditHistory) {
         this.auditHistory = auditHistory;
     }
 

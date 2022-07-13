@@ -24,7 +24,7 @@ public class EnvironmentBean {
     private SMEnvironment.DatabaseType environmentType = SMEnvironment.DatabaseType.None;
     private String environmentNotes = "";
     private List<KeyValueBean> extendedProperties;
-    private AuditHistory auditHistory;
+    private AuditBean auditHistory;
     private Date lastLoadingTime;
     String databaseName;
     private String databaseType = "";
@@ -95,11 +95,11 @@ public class EnvironmentBean {
         this.environmentNotes = environmentNotes;
     }
 
-    public AuditHistory getAuditHistory() {
+    public AuditBean getAuditHistory() {
         return auditHistory;
     }
 
-    public void setAuditHistory(AuditHistory auditHistory) {
+    public void setAuditHistory(AuditBean auditHistory) {
         this.auditHistory = auditHistory;
     }
 

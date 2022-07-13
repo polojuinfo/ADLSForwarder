@@ -6,7 +6,6 @@
 package com.erwin.cfx.connectors.adls.emm.utils;
 
 import com.ads.api.beans.common.AuditHistory;
-import com.ads.api.beans.common.Node;
 import com.ads.api.beans.kv.KeyValue;
 import com.ads.api.beans.sm.SMColumn;
 import com.ads.api.beans.sm.SMEnvironment;
@@ -14,6 +13,7 @@ import com.ads.api.beans.sm.SMTable;
 import com.ads.api.util.KeyValueUtil;
 import com.ads.api.util.SystemManagerUtil;
 import static com.erwin.cfx.connectors.adls.ADLSFilesUploader.appender;
+import com.erwin.cfx.connectors.adls.bean.AuditBean;
 import com.erwin.cfx.connectors.adls.bean.ColumnBean;
 import com.erwin.cfx.connectors.adls.bean.EnvironmentBean;
 import com.erwin.cfx.connectors.adls.bean.KeyValueBean;
@@ -28,6 +28,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -35,9 +36,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -70,6 +72,7 @@ public class MetadataManagerUtil {
      */
     public Map getEnvironmentJSONSMap(SystemManagerUtil systemManagerUtil, KeyValueUtil keyValueUtil,
             Map metadataSelection,List<Integer> selectedTbls,boolean isExtendedProp,String logFilePath) {
+        
         logger.addAppender(appender);
         commonUtil.setLogAppender();
         cal.setTimeInMillis(System.currentTimeMillis());
@@ -236,7 +239,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
         cal.setTimeInMillis(System.currentTimeMillis());
         logger.info("::Method_Name::getEnvironmentJSONS::Starting Time :" + formatter.format(cal.getTime()));
         sb.append("::Method_Name::getEnvironmentJSONS::Starting Time :" + formatter.format(cal.getTime())+"\n");
-        List<KeyValue> extendedProperties = null;
+        List<KeyValueBean> extendedProperties = null;
         String environmentJSON;
         JSONObject envJSONObj = null;
         String tablesJSONList;
@@ -267,7 +270,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
             if (isExtendedPorp) {
                 
             start = System.nanoTime();
-            Map<Integer, List<KeyValue>> envExtProps = getExtendedProperties(envIdsList, commonUtil.SM_ENVIRONMENT, keyValueUtil);
+            Map<Integer, List<KeyValueBean>> envExtProps = getExtendedProperties(envIdsList, 2);
             collectAllColumns(systemManagerUtil,tableIds);
             end = System.nanoTime();
             executionTimeinSec = TimeUnit.SECONDS.convert(end - start, TimeUnit.NANOSECONDS);
@@ -275,7 +278,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
             sb.append("Method_Name::getEnvironmentJSONS:: Time for fetching getExtendedProperties for SM_ENVIRONMENT :: "+ executionTimeinSec+"\n");
              
             start = System.nanoTime();
-            Map<Integer, List<KeyValue>> tblExtProps = getExtendedProperties(tableIds, commonUtil.SM_TABLE, keyValueUtil);
+            Map<Integer, List<KeyValueBean>> tblExtProps = getExtendedProperties(tableIds, 3);
             end = System.nanoTime();
             executionTimeinSec = TimeUnit.SECONDS.convert(end - start, TimeUnit.NANOSECONDS);
             logger.info("Method_Name::getEnvironmentJSONS:: Time for fetching getExtendedProperties for SM_TABLE :: "+ executionTimeinSec );
@@ -283,7 +286,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
               
             start = System.nanoTime();
             //Map<Integer, List<KeyValue>> clmExtProps = getExtendedProperties(columnIds, commonUtil.SM_COLUMN, keyValueUtil);
-            Map<Integer, List<KeyValueBean>> clmExtProps = getColumnExtendedProperties(columnIds, commonUtil.SM_COLUMN, keyValueUtil,sb);
+            Map<Integer, List<KeyValueBean>> clmExtProps = getExtendedProperties(columnIds, 4);
             end = System.nanoTime();
             executionTimeinSec = TimeUnit.SECONDS.convert(end - start, TimeUnit.NANOSECONDS);
             logger.info("Method_Name::getEnvironmentJSONS:: Time for fetching getExtendedProperties for SM_COLUMN :: "+ executionTimeinSec);
@@ -294,20 +297,25 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                     SMEnvironment environment = environments.get(environmentId); //If environment object is null
                     EnvironmentBean mmEnv = setEnvironmentProperties(environment);
                     //System.out.println(envExtProps.size());
-                    if(envExtProps!=null && !envExtProps.isEmpty()){
-                    extendedProperties = envExtProps.get(environmentId);
+                    if(envExtProps.containsKey(environmentId)){
+                         extendedProperties = envExtProps.get(environmentId);
+                         mmEnv.setExtendedProperties(extendedProperties);
+                    }
+//                    if(envExtProps!=null && !envExtProps.isEmpty()){
+//                    extendedProperties = envExtProps.get(environmentId);
+//                    mmEnv.setExtendedProperties(extendedProperties);
                     //System.out.println("Coming extended properties : "+extendedProperties);
-                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
-                        int length = extendedProperties.size();
-                        List<KeyValueBean> extProp = getModifiedExtProperties(extendedProperties, length);
-                        mmEnv.setExtendedProperties(extProp);
-                    }
-                    }
+//                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
+//                        int length = extendedProperties.size();
+//                        List<KeyValueBean> extProp = getModifiedExtProperties(extendedProperties, length);
+//                        mmEnv.setExtendedProperties(extProp);
+//                    }
+                  //  }
                     environmentJSON = commonUtil.mapSMObjectToJSON(mmEnv);
-                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
-                        environmentJSON = commonUtil.modifyExtendPorpertiesDateFormats(environmentJSON);
-                    }
-                    environmentJSON = commonUtil.modifyAuditDateFormats(environmentJSON);
+//                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
+//                        environmentJSON = commonUtil.modifyExtendPorpertiesDateFormats(environmentJSON);
+//                    }
+                  //  environmentJSON = commonUtil.modifyAuditDateFormats(environmentJSON);
                     List<SMTable> tables = allTables.get(environmentId);
                     if(!selectedTbls.isEmpty()|| selectedTbls!=null){
                         tables = getSelectedTables(tables,selectedTbls);
@@ -330,7 +338,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                     SMEnvironment environment = environments.get(environmentId);
                     EnvironmentBean mmEnv = setEnvironmentProperties(environment);
                     environmentJSON = commonUtil.mapSMObjectToJSON(mmEnv);
-                    environmentJSON = commonUtil.modifyAuditDateFormats(environmentJSON);
+                    //environmentJSON = commonUtil.modifyAuditDateFormats(environmentJSON);
                     List<SMTable> tables = allTables.get(environmentId);
                     if(!selectedTbls.isEmpty()&&selectedTbls!=null){
                         tables = getSelectedTables(tables,selectedTbls);
@@ -351,8 +359,8 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
             sb.append("Error in 11111 getEnvironmentJSONS:"+ ex.getMessage());
         }
         cal.setTimeInMillis(System.currentTimeMillis());
-        logger.info("::Method_Name:: getEnvironmentJSONS :: Ending Time :" + formatter.format(cal.getTime()));
-        sb.append("::Method_Name:: getEnvironmentJSONS :: Ending Time :" + formatter.format(cal.getTime())+"\n");
+        logger.info("::Method_Name::+getEnvironmentJSONS :: Ending Time :" + formatter.format(cal.getTime()));
+        sb.append("::Method_Name::+getEnvironmentJSONS :: Ending Time :" + formatter.format(cal.getTime())+"\n");
         return sysEnvJSONMap;
     }
 
@@ -364,6 +372,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
      * @param keyValueUtil
      * @return
      */
+    /*
     private Map getExtendedProperties(List ids, String ObjectType, KeyValueUtil keyValueUtil) {
         cal.setTimeInMillis(System.currentTimeMillis());
         logger.info("Starting Time :" + formatter.format(cal.getTime()));
@@ -383,33 +392,41 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
         cal.setTimeInMillis(System.currentTimeMillis());
         logger.info("Ending Time :" + formatter.format(cal.getTime()));
         return keyValues;
-    }
+    }*/
     
-    
-    private Map getColumnExtendedProperties(List ids, String ObjectType, KeyValueUtil keyValueUtil,StringBuffer sb) throws SQLException {
+    private Map getExtendedProperties(List<Integer> ids, int objectTypeId) throws SQLException {
         cal.setTimeInMillis(System.currentTimeMillis());
         logger.info("Starting Time :" + formatter.format(cal.getTime()));
-        sb.append("::Method_name :: getColumnExtendedProperties");
         Map<Integer, List<KeyValueBean>> keyValues = new HashMap();
         KeyValueBean kvBean = null;
         List<KeyValueBean> kv = null;
-        AuditHistory auditHistory;
+        AuditBean auditHistory;
         Map<String, Object> userData;
         Connection connection = null;
         try {
-            String qry = "SELECT KV_ID AS keyValueId,KEY_NAME AS Name,KEY_VALUE AS value,OBJECT_TYPE_ID,OBJECT_ID AS objectId,KV_TYPE AS Type,DESCRIPTION AS description,CREATED_DATE_TIME,LAST_MODIFIED_DATE_TIME,CREATED_BY,LAST_MODIFIED_BY  from ADS_KEY_VALUE WHERE OBJECT_TYPE_ID =4 AND OBJECT_ID IN ("+StringUtils.join(ids,",")+") order by OBJECT_ID desc";
+            String qry = "SELECT KV_ID AS keyValueId,KEY_NAME AS Name,KEY_VALUE AS value,OBJECT_TYPE_ID,OBJECT_ID AS objectId,KV_TYPE AS Type,DESCRIPTION AS description,CREATED_DATE_TIME,LAST_MODIFIED_DATE_TIME,CREATED_BY,LAST_MODIFIED_BY  from ADS_KEY_VALUE WHERE OBJECT_TYPE_ID = ? AND OBJECT_ID IN ("+StringUtils.join(ids,",")+") order by OBJECT_ID desc";
             logger.info(":: Query ::" + qry);
-            sb.append(":: Query ::" + qry + "\n");
-            
+//            List<String> parameters = new ArrayList<>();
+//    ids.forEach(id -> parameters.add("?"));   //Use forEach to add required no. of '?'
+//    String commaSepParameters = String.join(",", parameters); //Use String to join '?' with ','
+//    StringBuilder selectQuery = new StringBuilder()
+//            .append(qry)
+//            .append(commaSepParameters)
+//            .append(")").append(" order by OBJECT_ID desc");
+//    
             connection = ADSConnectionPool.getConnection();
             PreparedStatement statement = connection.prepareStatement(qry);
-                       
+           // Array array = statement.getConnection().createArrayOf("INTEGER", ids.toArray());
+           // statement.setArray(1, array);
+           // ids.forEach(id->statement.setIn);
+            statement.setInt(1, objectTypeId);
             ResultSet rs = statement.executeQuery();
             int objectId = 0;
+            String stringDate;
             while(rs.next()){
                 objectId = rs.getInt("objectId");
                  kvBean = new KeyValueBean();
-                 auditHistory = new AuditHistory();
+                 auditHistory = new AuditBean();
                  userData = new HashMap();
                  //setting properties
                  userData.put("Type", rs.getString("Type"));
@@ -417,9 +434,11 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                  userData.put("keyValueId", rs.getString("keyValueId"));
                  userData.put("objectId", rs.getString("objectId"));
                  auditHistory.setCreatedBy(rs.getString("CREATED_BY"));
-                 auditHistory.setCreatedDate(rs.getTimestamp("CREATED_DATE_TIME"));
+                 stringDate = formatter.format(rs.getTimestamp("CREATED_DATE_TIME"));
+                 auditHistory.setCreatedDate(stringDate);
                  auditHistory.setLastModifiedBy(rs.getString("LAST_MODIFIED_BY"));
-                 auditHistory.setLastModifiedDate(rs.getTimestamp("LAST_MODIFIED_DATE_TIME"));
+                 stringDate = formatter.format(rs.getTimestamp("LAST_MODIFIED_DATE_TIME"));
+                 auditHistory.setLastModifiedDate(stringDate);
                  kvBean.setKey(rs.getString("Name"));
                  kvBean.setValue(rs.getString("Value"));
                  kvBean.setObjectTypeId(rs.getString("OBJECT_TYPE_ID"));
@@ -435,8 +454,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                 keyValues.put(objectId, kv);
             } 
         } catch (Exception ex) {
-            logger.error("Error in getColumnExtendedProperties:\\n ",ex);
-            sb.append("Error in getColumnExtendedProperties:\n "+ex.getMessage());
+            logger.error("Error in getExtendedProperties:\\n ",ex);
         }
         finally{
              connection.close();
@@ -456,10 +474,10 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
      * @return
      * @throws JSONException
      */
-    private String getTablesJSONListWithExtProp(List<SMTable> tables, Map<Integer, List<KeyValue>> tblExtProps, Map<Integer, List<KeyValueBean>> clmExtProps) throws JSONException {
+    private String getTablesJSONListWithExtProp(List<SMTable> tables, Map<Integer, List<KeyValueBean>> tblExtProps, Map<Integer, List<KeyValueBean>> clmExtProps) throws JSONException {
         cal.setTimeInMillis(System.currentTimeMillis());
         logger.info("Starting Time :" + formatter.format(cal.getTime()));
-        List<KeyValue> extendedProperties;
+        List<KeyValueBean> extendedProperties = null;
         //Map<Integer, List> tablesJson;
         List<JSONObject> tableJsonList = null;
         JSONObject tableJSONObject = new JSONObject();
@@ -473,23 +491,26 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                 for (SMTable table : tables) {
                     tableId = table.getTableId();
                     TableBean tableBean = setTableProperties(table);
+                    if (tblExtProps.containsKey(tableId)) {
                     extendedProperties = tblExtProps.get(tableId);
-                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
-                        int length = extendedProperties.size();
-                        List<KeyValueBean> extProp = getModifiedExtProperties(extendedProperties, length);
-                        tableBean.setExtendedProperties(extProp);
+                    tableBean.setExtendedProperties(extendedProperties);
                     }
+//                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
+//                        int length = extendedProperties.size();
+//                        List<KeyValueBean> extProp = getModifiedExtProperties(extendedProperties, length);
+//                        tableBean.setExtendedProperties(extProp);
+//                    }
                     tableJSON = commonUtil.mapSMObjectToJSON(tableBean);
-                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
-                        tableJSON = commonUtil.modifyExtendPorpertiesDateFormats(tableJSON);
-                    }
-                    tableJSON = commonUtil.modifyAuditDateFormats(tableJSON);
+//                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
+//                        tableJSON = commonUtil.modifyExtendPorpertiesDateFormats(tableJSON);
+//                    }
+                   // tableJSON = commonUtil.modifyAuditDateFormats(tableJSON);
                     columns = allColumns.get(tableId);
                     columnsJSON = getColumnsJsonWithExtProp(columns,clmExtProps);
                     //adding columns json to table json
-                  //tableJSONObject = commonUtil.addListToJSONArray(tableJSON, columnsJSON, commonUtil.SM_TABLE);
+                    tableJSONObject = commonUtil.addListToJSONArray(tableJSON, columnsJSON, commonUtil.SM_TABLE);
                     //adding complete table json to list
-                  //tableJsonList.add(tableJSONObject);
+                    tableJsonList.add(tableJSONObject);
             }
         } catch (Exception ex) {
             logger.error("Error in getTablesJSONList:\n"+ex.getMessage());
@@ -525,7 +546,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                     tableId = table.getTableId();
                     TableBean tableBean = setTableProperties(table);
                     tableJSON = commonUtil.mapSMObjectToJSON(tableBean);
-                    tableJSON = commonUtil.modifyAuditDateFormats(tableJSON);
+                   // tableJSON = commonUtil.modifyAuditDateFormats(tableJSON);
                     columns = allColumns.get(tableId);
                     columnsJSON = getColumnsJsonWithoutExtProp(columns, tableId);
                     //adding columns json to table json
@@ -553,7 +574,8 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
      */
     private String getColumnsJsonWithExtProp(List<SMColumn> columns, Map<Integer, List<KeyValueBean>> clmExtProps) {
         cal.setTimeInMillis(System.currentTimeMillis());
-        //logger.info("START :: Method_Name :: getColumnsJsonWithExtProp Method"+formatter.format(cal.getTime()));
+        //logger.info("Starting Time :" + formatter.format(cal.getTime()));
+        //logger.info("Started getColumnsJson Method");
         List<KeyValueBean> extendedProperties = null;
         String columnJSON;
         List<String> columnjsons = new ArrayList();
@@ -569,22 +591,20 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                         columnBean.setExtendedProperties(extendedProperties);
                     }
                     columnJSON = commonUtil.mapSMObjectToJSON(columnBean);
-                    //logger.info(":: columnJSON ::"+columnJSON);
-                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
-                        columnJSON = commonUtil.modifyExtendPorpertiesDateFormats(columnJSON);
-                        //logger.info(":: modifyExtendPorpertiesDateFormats :: columnJSON ::"+columnJSON);
-                    }
-                    columnJSON = commonUtil.modifyAuditDateFormats(columnJSON);
-                    //logger.info(":: modifyAuditDateFormats :: columnJSON ::"+columnJSON);
-                     columnjsons.add(columnJSON);
+//                    if (extendedProperties != null && !extendedProperties.isEmpty()) {
+//                        columnJSON = commonUtil.modifyExtendPorpertiesDateFormats(columnJSON);
+//                    }
+                  //  columnJSON = commonUtil.modifyAuditDateFormats(columnJSON);
+                    columnjsons.add(columnJSON);
                     //columnsJSON = commonUtil.mapSMObjectToJSON(columns);
                 }
             }
         } catch (Exception ex) {
-            logger.error("Error in getColumnsJsonWithExtProp:\n", ex);
+            logger.error("Error in getColumnsJson:\n", ex);
         }
         cal.setTimeInMillis(System.currentTimeMillis());
-        //logger.info("END :: Method_Name :: getColumnsJsonWithExtProp Method"+formatter.format(cal.getTime()));
+        //logger.info("Ending Time :" + formatter.format(cal.getTime()));
+        //logger.info("Ended getColumnsJson method");
         return columnjsons.toString();
     }
 
@@ -608,20 +628,20 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
                     SMColumn column = columns.get(i);
                     ColumnBean columnBean = setColumnProperties(column);
                     columnJSON = commonUtil.mapSMObjectToJSON(columnBean);
-                    columnJSON = commonUtil.modifyAuditDateFormats(columnJSON);
+                  //  columnJSON = commonUtil.modifyAuditDateFormats(columnJSON);
                     columnjsons.add(columnJSON);
                     //columnsJSON = commonUtil.mapSMObjectToJSON(columns);
                 }
             }
         } catch (Exception ex) {
-            logger.error("Error in getColumnsJsonWithoutExtProp:\n", ex);
+            logger.error("Error in getColumnsJson:\n", ex);
         }
         cal.setTimeInMillis(System.currentTimeMillis());
         //logger.info("Ending Time :" + formatter.format(cal.getTime()));
         //logger.info("Ended getColumnsJson method");
         return columnjsons.toString();
     }
-    
+  /*  
     private List<KeyValueBean> getModifiedExtProperties(List<KeyValue> extendedProperties, int length) {
         List<KeyValueBean> extProp = new ArrayList();
         for (int i = 0; i < length; i++) {
@@ -638,7 +658,7 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
             extProp.add(extBean);
         }
         return extProp;
-    }
+    }*/
 
     private EnvironmentBean setEnvironmentProperties(SMEnvironment environment) {
         EnvironmentBean mmEnv = new EnvironmentBean();
@@ -648,7 +668,8 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
         mmEnv.setEnvironmentId(environment.getEnvironmentId());
         mmEnv.setEnvironmentType(environment.getEnvironmentType());
         mmEnv.setEnvironmentNotes(environment.getEnvironmentNotes());
-        mmEnv.setAuditHistory(environment.getAuditHistory());
+        AuditBean bean = setAuditHistory(environment.getAuditHistory());
+        mmEnv.setAuditHistory(bean);
         mmEnv.setDatabaseName(environment.getDatabaseName());
         mmEnv.setDatabaseType(environment.getDatabaseType());
         mmEnv.setDatabasePort(environment.getDatabasePort());
@@ -671,7 +692,8 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
         tableBean.setTableId(table.getTableId());
         tableBean.setTableDefinition(table.getTableDefinition());
         tableBean.setDataStewardName(table.getDataStewardName());
-        tableBean.setAuditHistory(table.getAuditHistory());
+        AuditBean bean = setAuditHistory(table.getAuditHistory());
+        tableBean.setAuditHistory(bean);
         tableBean.setEnvironmentId(table.getEnvironmentId());
         tableBean.setLogicalTableName(table.getLogicalTableName());
         tableBean.setPhysicalTableName(table.getPhysicalTableName());
@@ -685,7 +707,8 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
     }
     private ColumnBean setColumnProperties(SMColumn column) {
         ColumnBean columnBean = new ColumnBean();
-        columnBean.setAuditHistory(column.getAuditHistory());
+        AuditBean bean = setAuditHistory(column.getAuditHistory());
+        columnBean.setAuditHistory(bean);
         columnBean.setColumnComments(column.getColumnComments());
         columnBean.setColumnDatatype(column.getColumnDatatype());
         columnBean.setColumnDefinition(column.getColumnDefinition());
@@ -772,6 +795,21 @@ private void collectAllColumns(SystemManagerUtil systemManagerUtil,List<Integer>
         return "sysEnvJSONMap";
     }*/
     
-    
+    private AuditBean setAuditHistory(AuditHistory auditHistory){
+                    AuditBean bean = new AuditBean();
+
+        try {
+            String stringDate ;
+            stringDate = formatter.format(auditHistory.getCreatedDate());
+            bean.setCreatedBy(auditHistory.getCreatedBy());
+            bean.setCreatedDate(stringDate);
+            bean.setLastModifiedBy(auditHistory.getLastModifiedBy());
+            stringDate = formatter.format(auditHistory.getLastModifiedDate());
+            bean.setLastModifiedDate(stringDate);
+        } catch (Exception ex) {
+          logger.error(ex);       
+        }
+        return bean;
+    }
     
 }

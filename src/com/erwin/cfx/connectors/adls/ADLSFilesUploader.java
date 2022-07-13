@@ -62,7 +62,7 @@ StringBuffer sb = new StringBuffer();
     CommonUtil.cal.setTimeInMillis(System.currentTimeMillis());
     String timestamp = CommonUtil.formatter.format(CommonUtil.cal.getTime());
     
-    long start;
+    long start; //Added for testing purpose
     long end;
     long executionTimeinSec; 
     start = System.nanoTime();
